@@ -1,4 +1,9 @@
-import { redis } from "@/lib/redis";
+// lib/subdomains.ts
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export function isValidIcon(str: string) {
   if (str.length > 10) {
@@ -6,65 +11,123 @@ export function isValidIcon(str: string) {
   }
 
   try {
-    // Primary validation: Check if the string contains at least one emoji character
-    // This regex pattern matches most emoji Unicode ranges
     const emojiPattern = /[\p{Emoji}]/u;
     if (emojiPattern.test(str)) {
       return true;
     }
   } catch (error) {
-    // If the regex fails (e.g., in environments that don't support Unicode property escapes),
-    // fall back to a simpler validation
     console.warn(
       "Emoji regex validation failed, using fallback validation",
       error
     );
   }
 
-  // Fallback validation: Check if the string is within a reasonable length
-  // This is less secure but better than no validation
   return str.length >= 1 && str.length <= 10;
 }
 
 type SubdomainData = {
+  id: string;
+  subdomain: string;
   emoji: string;
-  createdAt: number;
+  name: string;
+  description: string | null;
+  banner_image_url: string | null;
+  about_url: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
-export async function getSubdomainData(subdomain: string) {
+export async function getSubdomainData(
+  subdomain: string
+): Promise<SubdomainData | null> {
   const sanitizedSubdomain = subdomain.toLowerCase().replace(/[^a-z0-9-]/g, "");
-  const data = await redis.get<SubdomainData>(
-    `subdomain:${sanitizedSubdomain}`
-  );
 
-  if (!data) return null;
+  console.log("🔍 Looking for subdomain:", sanitizedSubdomain);
 
-  return {
-    ...data,
-    aboutUrl: `/s/${sanitizedSubdomain}/about`, // default about page for all domains
-    bannerImage: `https://placehold.co/1200x300?text=${encodeURIComponent(
-      sanitizedSubdomain
-    )}`, // default banner image
-  };
+  const { data, error } = await supabase
+    .from("subdomains")
+    .select("*")
+    .eq("subdomain", sanitizedSubdomain)
+    .single();
+
+  if (error) {
+    console.log("❌ Supabase error:", error.message);
+    return null;
+  }
+
+  if (!data) {
+    console.log("❌ No data found for subdomain:", sanitizedSubdomain);
+    return null;
+  }
+
+  console.log("✅ Found subdomain data:", data);
+  return data;
 }
 
 export async function getAllSubdomains() {
-  const keys = await redis.keys("subdomain:*");
+  const { data, error } = await supabase
+    .from("subdomains")
+    .select("*")
+    .order("created_at", { ascending: false });
 
-  if (!keys.length) {
+  if (error || !data) {
+    console.error("Error fetching subdomains:", error?.message);
     return [];
   }
 
-  const values = await redis.mget<SubdomainData[]>(...keys);
+  return data.map((subdomain) => ({
+    subdomain: subdomain.subdomain,
+    emoji: subdomain.emoji,
+    createdAt: new Date(subdomain.created_at).getTime(),
+  }));
+}
 
-  return keys.map((key, index) => {
-    const subdomain = key.replace("subdomain:", "");
-    const data = values[index];
+export async function createSubdomain(data: {
+  subdomain: string;
+  emoji: string;
+  name: string;
+  description?: string;
+}) {
+  console.log("🔄 Creating subdomain:", data);
 
-    return {
-      subdomain,
-      emoji: data?.emoji || "❓",
-      createdAt: data?.createdAt || Date.now(),
-    };
-  });
+  // Check if subdomain already exists
+  const { data: existing } = await supabase
+    .from("subdomains")
+    .select("id")
+    .eq("subdomain", data.subdomain.toLowerCase())
+    .single();
+
+  if (existing) {
+    console.log("❌ Subdomain already exists");
+    return { data: null, error: { message: "Subdomain already exists" } };
+  }
+
+  const { data: result, error } = await supabase
+    .from("subdomains")
+    .insert({
+      subdomain: data.subdomain.toLowerCase(),
+      emoji: data.emoji,
+      name: data.name,
+      description: data.description,
+      about_url: `/s/${data.subdomain.toLowerCase()}/about`,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.log("❌ Error creating subdomain:", error);
+  } else {
+    console.log("✅ Created subdomain:", result);
+  }
+
+  return { data: result, error };
+}
+
+export async function deleteSubdomain(subdomain: string) {
+  const { error } = await supabase
+    .from("subdomains")
+    .delete()
+    .eq("subdomain", subdomain);
+
+  return { error };
 }
