@@ -197,30 +197,6 @@ export default function ActivitiesFeed({
 
           {/* Right Sidebar */}
           <div className="space-y-6">
-            {/* Categories */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                Kategorier
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {categories.map((category, index) => (
-                  <button
-                    key={index}
-                    className="flex flex-col items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group"
-                  >
-                    <div
-                      className={`${category.color} w-10 h-10 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}
-                    >
-                      <category.icon className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300 text-center">
-                      {category.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Upcoming Events */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between mb-4">
@@ -250,6 +226,30 @@ export default function ActivitiesFeed({
                       </p>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Categories */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                Kategorier
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {categories.map((category, index) => (
+                  <button
+                    key={index}
+                    className="flex flex-col items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group"
+                  >
+                    <div
+                      className={`${category.color} w-10 h-10 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}
+                    >
+                      <category.icon className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300 text-center">
+                      {category.name}
+                    </span>
+                  </button>
                 ))}
               </div>
             </div>
